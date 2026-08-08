@@ -2,24 +2,25 @@
 
 ## 2026-08-08
 
-### Bugfix: obstacles/crystals stopping after a few seconds
-**Cause:** Player stays at `z ≈ 0` while the world scrolls toward the camera. `nextSpawnZ` was only ever decreased when spawning, never advanced with the scroll. Once it fell past the look-ahead (`player.z - 95`), `spawnAhead()` stopped running forever.
+### Spawn bug fix (v2 – robust)
+**Problem:** Obstacles/crystals stopped after the intro training sequence.
 
-**Fix:** Each frame, after moving obstacles/crystals:
-```js
-nextSpawnZ += move;
-lastInteractableZ += move;
-```
-The spawn frontier now scrolls with the world, so new content keeps being placed ahead indefinitely.
+**Root cause:** Spawn frontier tracking via `nextSpawnZ` alone was fragile with a fixed-player / scrolling-world setup.
 
-### Continuous route + teaching intro (previous)
-- Forced interactables when empty stretch exceeds `getMaxEmptyGap()`
-- Intro: 4 center-lane crystals → gap → one red jump obstacle (teaches collect vs avoid)
-- Clearer title hint and distinct crystal/obstacle visuals
+**Fix:** `spawnAhead()` now inspects **live** obstacles and crystals each frame, finds the furthest (most negative Z), and keeps placing new ones until that frontier is at least 100 units ahead of the player. If a placement roll fails, it **forces** a crystal or obstacle so the route never goes empty.
+
+Also still scrolls `nextSpawnZ` with the world as a secondary cue for intro handoff.
+
+### Teaching intro
+- 4 cyan crystals in a center-lane line (immediate points)
+- Short gap
+- One red jump obstacle in center (teaches avoidance)
+- Then continuous progressive spawning
 
 ### Modules
-- `js/entities.js` – crystal vs obstacle meshes
-- `js/difficulty.js` – speed/density ramps, intro sequence, max empty gap
+- `js/entities.js` – distinct crystal (cyan/halo/rings) vs obstacle (red/spiky) visuals
+- `js/difficulty.js` – speed/density ramps, intro layout, gap helpers
 
 ### Play
 https://jaketdaniels.github.io/neon-dash/
+(Hard-refresh if the old build is cached.)
