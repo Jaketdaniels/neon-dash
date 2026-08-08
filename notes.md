@@ -4,31 +4,21 @@
 
 ### Repo & Pages
 - Public repo: https://github.com/Jaketdaniels/neon-dash
-- `.nojekyll` present.
 - Enable Pages: Settings → Pages → Deploy from branch `main` → `/` (root).
 - Live: https://jaketdaniels.github.io/neon-dash/
 
-### Core Game
-- Three.js + UnrealBloomPass neon endless runner.
-- Procedural Canvas neon-grid texture.
-- Hovercraft, 3 lanes, jump, NEON DASH, crystals + multiplier, random events (Glitch Wave, Crystal Rain, Phase Shift, Overclock).
-- Mobile swipe / hold controls, responsive UI.
+### Modular additions (latest)
+- **`js/entities.js`** – visually distinct entities:
+  - **Crystals** (points): dual-tone cyan/magenta octahedron + additive glow halo + spinning ring. Friendly, high-emissive silhouette.
+  - **Obstacles** (danger): aggressive red/orange palette, spikes on barriers, warning stripes on low bars, glowing bands on pillars, spiky spinning hazards. Harder types bias upward with distance.
+- **`js/difficulty.js`** – progressive difficulty:
+  - Base speed ramps with distance travelled.
+  - Obstacle density and spawn gap tighten the further you go.
+  - Crystal chance stays generous so scoring remains fun.
+  - Max speed-mul ceiling also grows slowly so Neon Dash stays useful late-game.
 
-### Web Audio Synthwave Soundtrack (latest)
-- Pure Web Audio API – no external audio files.
-- Layers: kick, filtered noise snare, hats, detuned saw/square bass, filtered arp lead, evolving pad.
-- 100 BPM classic synthwave progression (A-minor flavored).
-- Scheduler with lookahead for tight timing.
-- Starts safely on Play / Reboot (user gesture).
-- Mute toggle in HUD (♪ ON / OFF).
-- Volume pulse on NEON DASH and special events for extra intensity.
-- Master lowpass filter for polished retro tone.
+### Core features (unchanged)
+- Three.js + bloom, synthwave Web Audio soundtrack, mobile swipe controls, events, dash, etc.
 
-### Commits
-1. Title screen
-2. .nojekyll
-3. Full 3D game loop
-4. Side posts + title ambient drift
-5. Clean restore
-6. Notes + README
-7. Web Audio synthwave + mute + reactive pulses (current)
+### How to preview
+Refresh the Pages site after the latest push. Obstacles now clearly look dangerous (red/spiky); crystals clearly look collectible (cyan + halo + ring). Speed and obstacle pressure rise the longer you survive.
