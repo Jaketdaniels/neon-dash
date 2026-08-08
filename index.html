@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Neon Dash</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#050010;font-family:system-ui,sans-serif;touch-action:none}
+#game-container{position:relative;width:100%;height:100%}
+canvas{display:block;width:100%;height:100%}
+#ui-overlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:center;align-items:center;background:radial-gradient(ellipse at center,rgba(25,0,50,.75) 0%,rgba(5,0,15,.97) 100%);transition:opacity .6s;z-index:10}
+#ui-overlay.hidden{opacity:0;pointer-events:none}
+.title{font-size:clamp(2.8rem,13vw,5.5rem);font-weight:900;letter-spacing:.12em;text-transform:uppercase;background:linear-gradient(90deg,#ff00aa,#00f0ff,#ff00aa,#00f0ff);background-size:300% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:neon-flow 4s linear infinite;margin-bottom:.3rem;text-align:center;filter:drop-shadow(0 0 12px rgba(255,0,170,.6))}
+@keyframes neon-flow{to{background-position:300% center}}
+.subtitle{color:#00f0ff;font-size:clamp(.85rem,2.8vw,1.15rem);letter-spacing:.45em;text-transform:uppercase;margin-bottom:2.2rem;opacity:.9;text-shadow:0 0 12px #00f0ff}
+#start-btn,#retry-btn{pointer-events:auto;padding:1.05rem 2.8rem;font-size:1.2rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0a001a;background:linear-gradient(135deg,#ff00aa,#ff55cc);border:none;border-radius:999px;cursor:pointer;box-shadow:0 0 28px rgba(255,0,170,.65)}
+.hint{margin-top:1.8rem;color:#b999ff;font-size:.8rem;opacity:.75;text-align:center;max-width:92%;line-height:1.5}
+#hud{position:absolute;top:0;left:0;right:0;padding:.9rem 1.1rem;display:none;justify-content:space-between;align-items:flex-start;color:#00f0ff;font-size:clamp(1rem,3.5vw,1.25rem);font-weight:700;text-shadow:0 0 10px #00f0ff;pointer-events:none;z-index:5}
+#hud.visible{display:flex}
+#multiplier{color:#ff00aa;font-size:.85em;opacity:0;transition:opacity .2s}
+#multiplier.show{opacity:1}
+#mute-btn{pointer-events:auto;background:transparent;border:1px solid rgba(0,240,255,.4);color:#00f0ff;font-size:.85rem;padding:.35rem .6rem;border-radius:6px;cursor:pointer;opacity:.8;margin-top:.4rem}
+#gameover{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;background:radial-gradient(ellipse at center,rgba(40,0,60,.85) 0%,rgba(5,0,15,.97) 100%);z-index:20;pointer-events:none}
+#gameover.visible{display:flex;pointer-events:auto}
+#gameover h2{color:#ff00aa;font-size:clamp(2rem,9vw,3.2rem);letter-spacing:.15em;text-shadow:0 0 20px #ff00aa;margin-bottom:.6rem}
+#final-score{color:#00f0ff;font-size:1.4rem;margin-bottom:1.8rem;text-shadow:0 0 10px #00f0ff}
+#event-banner{position:absolute;top:18%;left:50%;transform:translateX(-50%) scale(.8);color:#fff;font-size:clamp(1.1rem,4.5vw,1.6rem);font-weight:800;letter-spacing:.2em;text-transform:uppercase;opacity:0;pointer-events:none;z-index:15;text-shadow:0 0 15px #ff00aa,0 0 30px #00f0ff;transition:opacity .3s,transform .3s}
+#event-banner.show{opacity:1;transform:translateX(-50%) scale(1)}
+</style>
+</head>
+<body>
+<div id="game-container">
+<div id="ui-overlay">
+<h1 class="title">Neon Dash</h1>
+<p class="subtitle">Synthwave Runner</p>
+<button id="start-btn">Play</button>
+<p class="hint">Swipe ◀ ▶ to change lanes · Swipe ▲ to jump<br>Collect glowing cyan crystals · Avoid red obstacles · Hold for NEON DASH</p>
+</div>
+<div id="hud">
+<div><div id="score-display">0</div><div id="multiplier">x1</div></div>
+<div style="text-align:right"><div id="speed-display">1.0×</div><button id="mute-btn" title="Mute / Unmute">♪ ON</button></div>
+</div>
+<div id="event-banner"></div>
+<div id="gameover"><h2>SIGNAL LOST</h2><div id="final-score">Score: 0</div><button id="retry-btn">Reboot</button></div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { createCrystal, createObstacle, updateCrystal, updateObstacle } from './js/entities.js';
+import { getBaseSpeed, getMaxSpeedMul, getObstacleDensity, getSpawnGap, getCrystalChance, getMaxEmptyGap, getIntroSequence } from './js/difficulty.js';
+
+const LANES=[-2.4,0,2.4], ROAD_WIDTH=8, SEGMENT_LENGTH=20, NUM_SEGMENTS=12, JUMP_FORCE=11, GRAVITY=28;
+let scene,camera,renderer,composer,clock,player,trail;
+let roadSegments=[],sidePosts=[],obstacles=[],crystals=[],particles=[],ambientStars;
+let gameState='title', score=0, multiplier=1, streak=0, distance=0, speedMul=1, baseSpeed=18;
+let targetLane=1, playerY=0, vy=0, isGrounded=true, invuln=0, dashTimer=0, dashCooldown=0;
+let nextSpawnZ=-40, lastInteractableZ=0, eventTimer=0, touchStart=null, lastTap=0;
+
+// Web Audio synthwave (compact)
+let audioCtx=null,masterGain=null,musicPlaying=false,musicMuted=false,nextNoteTime=0,currentStep=0,schedulerTimer=null;
+const BPM=100,STEPS_PER_BEAT=4,LOOKAHEAD=.12,SCHEDULE_AHEAD=.25;
+const bassNotes=[45,45,41,41,48,48,43,43], arpNotes=[57,60,64,67,64,60,57,53,57,60,64,69,64,60,57,53], padNotes=[57,60,64];
+function midiToFreq(m){return 440*Math.pow(2,(m-69)/12)}
+function initAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();masterGain=audioCtx.createGain();masterGain.gain.value=.22;const f=audioCtx.createBiquadFilter();f.type='lowpass';f.frequency.value=4800;f.Q.value=.7;masterGain.connect(f);f.connect(audioCtx.destination)}
+function playKick(t){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g);g.connect(masterGain);o.start(t);o.stop(t+.26)}
+function playSnare(t){const n=audioCtx.sampleRate*.15,b=audioCtx.createBuffer(1,n,audioCtx.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=audioCtx.createBufferSource();s.buffer=b;const f=audioCtx.createBiquadFilter();f.type='highpass';f.frequency.value=1200;const g=audioCtx.createGain();g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);s.connect(f);f.connect(g);g.connect(masterGain);s.start(t);s.stop(t+.15)}
+function playHat(t,open=false){const n=audioCtx.sampleRate*(open?.12:.04),b=audioCtx.createBuffer(1,n,audioCtx.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=audioCtx.createBufferSource();s.buffer=b;const f=audioCtx.createBiquadFilter();f.type='highpass';f.frequency.value=open?6000:9000;const g=audioCtx.createGain();g.gain.setValueAtTime(open?.12:.08,t);g.gain.exponentialRampToValueAtTime(.001,t+(open?.1:.03));s.connect(f);f.connect(g);g.connect(masterGain);s.start(t);s.stop(t+(open?.12:.04))}
+function playBass(t,m){const o1=audioCtx.createOscillator(),o2=audioCtx.createOscillator(),g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();o1.type='sawtooth';o2.type='square';o1.frequency.value=midiToFreq(m);o2.frequency.value=midiToFreq(m)*.997;f.type='lowpass';f.frequency.setValueAtTime(420,t);f.frequency.exponentialRampToValueAtTime(180,t+.35);f.Q.value=3;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.28,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.42);o1.connect(f);o2.connect(f);f.connect(g);g.connect(masterGain);o1.start(t);o2.start(t);o1.stop(t+.45);o2.stop(t+.45)}
+function playArp(t,m){const o=audioCtx.createOscillator(),g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();o.type='sawtooth';o.frequency.value=midiToFreq(m);f.type='lowpass';f.frequency.setValueAtTime(2800,t);f.frequency.exponentialRampToValueAtTime(600,t+.18);f.Q.value=4;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.14,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.connect(f);f.connect(g);g.connect(masterGain);o.start(t);o.stop(t+.22)}
+function playPad(t){padNotes.forEach((m,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();o.type='sawtooth';o.frequency.value=midiToFreq(m-12);f.type='lowpass';f.frequency.value=900+i*80;f.Q.value=1.5;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.045,t+1.2);g.gain.linearRampToValueAtTime(.0001,t+7.5);o.connect(f);f.connect(g);g.connect(masterGain);o.start(t);o.stop(t+7.6)})}
+function scheduleNote(step,t){const beat=Math.floor(step/STEPS_PER_BEAT)%8,sub=step%STEPS_PER_BEAT;if(sub===0&&beat%2===0)playKick(t);if(sub===0&&beat%2===1)playSnare(t);if(sub===0||sub===2)playHat(t,sub===2&&beat%4===3);else if(sub===1||sub===3)playHat(t,false);if(sub===0)playBass(t,bassNotes[beat]);playArp(t,arpNotes[step%arpNotes.length]);if(step%32===0)playPad(t)}
+function scheduler(){if(!musicPlaying||!audioCtx)return;while(nextNoteTime<audioCtx.currentTime+SCHEDULE_AHEAD){scheduleNote(currentStep,nextNoteTime);nextNoteTime+=(60/BPM)/STEPS_PER_BEAT;currentStep++}schedulerTimer=setTimeout(scheduler,LOOKAHEAD*1000)}
+function startMusic(){initAudio();if(audioCtx.state==='suspended')audioCtx.resume();if(musicPlaying)return;musicPlaying=true;currentStep=0;nextNoteTime=audioCtx.currentTime+.05;scheduler()}
+function setMuted(m){musicMuted=m;if(masterGain)masterGain.gain.setTargetAtTime(m?0:.22,audioCtx.currentTime,.05);document.getElementById('mute-btn').textContent=m?'♪ OFF':'♪ ON'}
+function musicPulse(d=.6){if(!masterGain||musicMuted)return;const n=audioCtx.currentTime;masterGain.gain.cancelScheduledValues(n);masterGain.gain.setValueAtTime(masterGain.gain.value,n);masterGain.gain.linearRampToValueAtTime(.32,n+.05);masterGain.gain.linearRampToValueAtTime(.22,n+d)}
+
+const overlay=document.getElementById('ui-overlay'),hud=document.getElementById('hud'),scoreEl=document.getElementById('score-display'),speedEl=document.getElementById('speed-display'),multEl=document.getElementById('multiplier'),gameover=document.getElementById('gameover'),finalScore=document.getElementById('final-score'),eventBanner=document.getElementById('event-banner'),startBtn=document.getElementById('start-btn'),retryBtn=document.getElementById('retry-btn'),muteBtn=document.getElementById('mute-btn');
+
+function createNeonGridTexture(){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#050018';ctx.fillRect(0,0,256,256);for(let i=0;i<800;i++){ctx.fillStyle=`rgba(${20+Math.random()*40},0,${40+Math.random()*60},${.05+Math.random()*.1})`;ctx.fillRect(Math.random()*256,Math.random()*256,2,2)}ctx.strokeStyle='#00e5ff';ctx.lineWidth=1.5;ctx.shadowColor='#00e5ff';ctx.shadowBlur=6;for(let i=0;i<=8;i++){const p=(i/8)*256;ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,256);ctx.stroke();ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(256,p);ctx.stroke()}ctx.strokeStyle='#ff00aa';ctx.shadowColor='#ff00aa';ctx.lineWidth=1;for(let i=0;i<=4;i++){const p=(i/4)*256+16;ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,256);ctx.stroke()}const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(2,8);return tex}
+
+function init(){scene=new THREE.Scene();scene.background=new THREE.Color(0x050010);scene.fog=new THREE.FogExp2(0x0a0020,.018);camera=new THREE.PerspectiveCamera(65,window.innerWidth/window.innerHeight,.1,200);camera.position.set(0,4.5,8);camera.lookAt(0,1,-10);renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(window.innerWidth,window.innerHeight);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.getElementById('game-container').appendChild(renderer.domElement);const rp=new RenderPass(scene,camera),bp=new UnrealBloomPass(new THREE.Vector2(window.innerWidth,window.innerHeight),1.4,.5,.75);composer=new EffectComposer(renderer);composer.addPass(rp);composer.addPass(bp);clock=new THREE.Clock();scene.add(new THREE.AmbientLight(0x220033,.4));const n1=new THREE.PointLight(0xff00aa,2.5,40);n1.position.set(-6,5,0);scene.add(n1);const n2=new THREE.PointLight(0x00f0ff,2.5,40);n2.position.set(6,5,0);scene.add(n2);const sg=new THREE.BufferGeometry(),sp=[];for(let i=0;i<600;i++)sp.push((Math.random()-.5)*120,Math.random()*40+5,(Math.random()-.5)*180-40);sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));ambientStars=new THREE.Points(sg,new THREE.PointsMaterial({color:0xaa88ff,size:.12,transparent:true,opacity:.8}));scene.add(ambientStars);createPlayer();const gt=createNeonGridTexture();for(let i=0;i<NUM_SEGMENTS;i++){const seg=createRoadSegment(gt);seg.position.z=-i*SEGMENT_LENGTH;scene.add(seg);roadSegments.push(seg)}createSideRails();window.addEventListener('resize',onResize);setupInput();animate()}
+
+function createPlayer(){player=new THREE.Group();const bm=new THREE.MeshStandardMaterial({color:0x1a0033,emissive:0xff00aa,emissiveIntensity:.45,metalness:.8,roughness:.3});const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,.35,1.8),bm);body.position.y=.4;player.add(body);const cm=new THREE.MeshStandardMaterial({color:0x00f0ff,emissive:0x00f0ff,emissiveIntensity:.9,transparent:true,opacity:.85});const cock=new THREE.Mesh(new THREE.SphereGeometry(.35,12,10),cm);cock.position.set(0,.65,-.15);cock.scale.set(1,.7,1.2);player.add(cock);const wm=new THREE.MeshStandardMaterial({color:0x220044,emissive:0x00aaff,emissiveIntensity:.35});const wL=new THREE.Mesh(new THREE.BoxGeometry(.15,.08,1.2),wm);wL.position.set(-.7,.35,.1);player.add(wL);const wR=wL.clone();wR.position.x=.7;player.add(wR);const eng=new THREE.Mesh(new THREE.CylinderGeometry(.18,.25,.15,10),new THREE.MeshBasicMaterial({color:0xff00aa}));eng.rotation.x=Math.PI/2;eng.position.set(0,.3,.95);player.add(eng);const tg=new THREE.BufferGeometry();tg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(60*3),3));trail=new THREE.Points(tg,new THREE.PointsMaterial({color:0xff00aa,size:.18,transparent:true,opacity:.7,blending:THREE.AdditiveBlending}));scene.add(trail);player.position.set(0,0,0);scene.add(player)}
+function createRoadSegment(tex){const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({map:tex,color:0xffffff,emissive:0x001122,emissiveIntensity:.3,metalness:.2,roughness:.7});const plane=new THREE.Mesh(new THREE.PlaneGeometry(ROAD_WIDTH,SEGMENT_LENGTH),mat);plane.rotation.x=-Math.PI/2;g.add(plane);const lm=new THREE.MeshBasicMaterial({color:0x00f0ff});[-1.2,1.2].forEach(x=>{const line=new THREE.Mesh(new THREE.BoxGeometry(.06,.04,SEGMENT_LENGTH),lm);line.position.set(x,.02,0);g.add(line)});const em=new THREE.MeshBasicMaterial({color:0xff00aa});[-ROAD_WIDTH/2+.1,ROAD_WIDTH/2-.1].forEach(x=>{const edge=new THREE.Mesh(new THREE.BoxGeometry(.12,.08,SEGMENT_LENGTH),em);edge.position.set(x,.04,0);g.add(edge)});return g}
+function createSideRails(){const rm=new THREE.MeshStandardMaterial({color:0x110022,emissive:0xff00aa,emissiveIntensity:.6,metalness:.9});for(let side of[-1,1])for(let i=0;i<14;i++){const post=new THREE.Mesh(new THREE.BoxGeometry(.25,1.8,.25),rm);post.position.set(side*(ROAD_WIDTH/2+.6),.9,-i*10);scene.add(post);sidePosts.push(post)}}
+
+function spawnObstacle(z,opts={}){const group=createObstacle(z,distance,opts);scene.add(group);obstacles.push(group);lastInteractableZ=Math.min(lastInteractableZ,z)}
+function spawnCrystal(z,laneIdx){const crystal=createCrystal(z,laneIdx);scene.add(crystal);crystals.push(crystal);lastInteractableZ=Math.min(lastInteractableZ,z)}
+
+function spawnAhead(){while(nextSpawnZ>player.position.z-95){const dens=getObstacleDensity(distance,speedMul),gap=getSpawnGap(distance),maxEmpty=getMaxEmptyGap(distance),emptyStretch=lastInteractableZ-nextSpawnZ;let placed=false;if(emptyStretch>maxEmpty){if(Math.random()<.55)spawnCrystal(nextSpawnZ);else spawnObstacle(nextSpawnZ);placed=true}else{if(Math.random()<dens){spawnObstacle(nextSpawnZ);placed=true}if(Math.random()<getCrystalChance(distance)){spawnCrystal(nextSpawnZ-2+Math.random()*4);placed=true}}const step=placed?gap*(.7+Math.random()*.45):Math.min(gap*.9,maxEmpty*.45);nextSpawnZ-=step}}
+
+function setupInput(){window.addEventListener('keydown',e=>{if(gameState==='playing'){if(e.code==='ArrowLeft'||e.code==='KeyA')changeLane(-1);if(e.code==='ArrowRight'||e.code==='KeyD')changeLane(1);if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')jump();if(e.code==='ShiftLeft'||e.code==='ShiftRight')tryDash()}});const canvas=renderer.domElement;canvas.addEventListener('touchstart',e=>{if(e.touches.length===1)touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY,t:performance.now()}},{passive:true});canvas.addEventListener('touchend',e=>{if(!touchStart||gameState!=='playing')return;const t=e.changedTouches[0],dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y,dt=performance.now()-touchStart.t,absX=Math.abs(dx),absY=Math.abs(dy);if(dt<350&&(absX>30||absY>30)){if(absX>absY)changeLane(dx>0?1:-1);else if(dy<-25)jump()}else if(dt<200&&absX<20&&absY<20){const now=performance.now();if(now-lastTap<280)tryDash();else jump();lastTap=now}touchStart=null},{passive:true});let holdTimer=null;canvas.addEventListener('touchstart',()=>{if(gameState==='playing')holdTimer=setTimeout(()=>tryDash(),400)});canvas.addEventListener('touchend',()=>clearTimeout(holdTimer));canvas.addEventListener('touchcancel',()=>clearTimeout(holdTimer))}
+function changeLane(dir){const next=THREE.MathUtils.clamp(targetLane+dir,0,2);if(next!==targetLane){targetLane=next;spawnBurst(player.position.clone().add(new THREE.Vector3(0,.5,0)),0x00f0ff,8)}}
+function jump(){if(isGrounded&&gameState==='playing'){vy=JUMP_FORCE;isGrounded=false;spawnBurst(player.position.clone(),0xff00aa,12)}}
+function tryDash(){if(dashCooldown<=0&&gameState==='playing'){dashTimer=.55;invuln=Math.max(invuln,.55);dashCooldown=2.8;speedMul=Math.min(speedMul+.15,getMaxSpeedMul(distance));spawnBurst(player.position.clone(),0xffffff,20);showEvent('NEON DASH');musicPulse(.7)}}
+function triggerRandomEvent(){const events=[{name:'GLITCH WAVE',fn:()=>{invuln=2.5;speedMul+=.25;musicPulse(1.2)}},{name:'CRYSTAL RAIN',fn:()=>{for(let i=0;i<12;i++)spawnCrystal(player.position.z-25-i*4)}},{name:'PHASE SHIFT',fn:()=>{camera.fov=85;camera.updateProjectionMatrix();setTimeout(()=>{camera.fov=65;camera.updateProjectionMatrix()},2200);musicPulse(1.5)}},{name:'OVERCLOCK',fn:()=>{baseSpeed*=1.12;musicPulse(.9)}}];const e=events[Math.floor(Math.random()*events.length)];e.fn();showEvent(e.name)}
+function showEvent(text){eventBanner.textContent=text;eventBanner.classList.add('show');setTimeout(()=>eventBanner.classList.remove('show'),1600)}
+function spawnBurst(pos,color,count){for(let i=0;i<count;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.08+Math.random()*.06,4,4),new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));m.position.copy(pos);m.userData={vel:new THREE.Vector3((Math.random()-.5)*6,Math.random()*5+1,(Math.random()-.5)*4-2),life:.6+Math.random()*.4};scene.add(m);particles.push(m)}}
+
+function startGame(){startMusic();overlay.classList.add('hidden');gameover.classList.remove('visible');hud.classList.add('visible');gameState='playing';score=0;multiplier=1;streak=0;distance=0;speedMul=1;baseSpeed=18;targetLane=1;player.position.set(0,0,0);playerY=0;vy=0;isGrounded=true;invuln=1.8;dashTimer=0;dashCooldown=0;eventTimer=20+Math.random()*8;obstacles.forEach(o=>scene.remove(o));crystals.forEach(c=>scene.remove(c));particles.forEach(p=>scene.remove(p));obstacles=[];crystals=[];particles=[];roadSegments.forEach((s,i)=>{s.position.z=-i*SEGMENT_LENGTH});sidePosts.forEach((p,i)=>{p.position.z=-(i%14)*10});
+// Teaching intro: crystals in a line → gap → first obstacle
+const intro=getIntroSequence();lastInteractableZ=0;intro.crystals.forEach(c=>spawnCrystal(c.z,c.lane));spawnObstacle(intro.firstObstacleZ,{lane:1,kind:'jump'});nextSpawnZ=intro.normalSpawnStartsAt;lastInteractableZ=intro.firstObstacleZ;spawnAhead()}
+function die(){if(invuln>0)return;gameState='dead';spawnBurst(player.position.clone().add(new THREE.Vector3(0,.6,0)),0xff0044,35);finalScore.textContent=`Score: ${Math.floor(score)}`;gameover.classList.add('visible');hud.classList.remove('visible')}
+
+function update(dt){if(gameState!=='playing'){if(gameState==='title'){camera.position.x=Math.sin(clock.elapsedTime*.3)*1.5;camera.position.y=4.5+Math.sin(clock.elapsedTime*.4)*.3;camera.lookAt(0,1,-8);const idle=4*dt;roadSegments.forEach(s=>{s.position.z+=idle;if(s.position.z>SEGMENT_LENGTH)s.position.z-=NUM_SEGMENTS*SEGMENT_LENGTH});sidePosts.forEach(p=>{p.position.z+=idle;if(p.position.z>15)p.position.z-=140})}return}
+baseSpeed=getBaseSpeed(distance);const maxMul=getMaxSpeedMul(distance);if(speedMul>maxMul)speedMul=maxMul;const speed=baseSpeed*speedMul;distance+=speed*dt;score+=speed*dt*multiplier*(dashTimer>0?2.2:1);
+const targetX=LANES[targetLane];player.position.x=THREE.MathUtils.lerp(player.position.x,targetX,1-Math.pow(.001,dt));
+if(!isGrounded||vy>0){vy-=GRAVITY*dt;playerY+=vy*dt;if(playerY<=0){playerY=0;vy=0;isGrounded=true}}player.position.y=playerY;player.rotation.z=THREE.MathUtils.lerp(player.rotation.z,-player.position.x*.08,.1);player.rotation.x=THREE.MathUtils.lerp(player.rotation.x,dashTimer>0?-.15:0,.1);
+const move=speed*dt;roadSegments.forEach(s=>{s.position.z+=move;if(s.position.z>SEGMENT_LENGTH)s.position.z-=NUM_SEGMENTS*SEGMENT_LENGTH});sidePosts.forEach(p=>{p.position.z+=move;if(p.position.z>15)p.position.z-=140});obstacles.forEach(o=>{o.position.z+=move});crystals.forEach(c=>{c.position.z+=move});
+camera.position.x=THREE.MathUtils.lerp(camera.position.x,player.position.x*.55,.08);camera.position.y=THREE.MathUtils.lerp(camera.position.y,4.2+playerY*.3,.08);camera.position.z=7.5;camera.lookAt(player.position.x*.4,1.2+playerY*.5,player.position.z-12);
+if(invuln>0)invuln-=dt;if(dashTimer>0)dashTimer-=dt;if(dashCooldown>0)dashCooldown-=dt;eventTimer-=dt;if(eventTimer<=0){triggerRandomEvent();eventTimer=16+Math.random()*14}
+obstacles.forEach(o=>updateObstacle(o,dt));
+for(let i=crystals.length-1;i>=0;i--){const c=crystals[i];updateCrystal(c,clock.elapsedTime);if(c.position.z>8){scene.remove(c);crystals.splice(i,1);continue}const dx=c.position.x-player.position.x,dy=c.position.y-(player.position.y+.5),dz=c.position.z-player.position.z;if(Math.abs(dx)<1.2&&Math.abs(dy)<1.3&&Math.abs(dz)<1.5){scene.remove(c);crystals.splice(i,1);streak++;multiplier=1+Math.min(4,Math.floor(streak/4)*.5);score+=50*multiplier;spawnBurst(c.position,0x00ffff,12);multEl.textContent=`×${multiplier.toFixed(1)}`;multEl.classList.add('show')}}
+for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(o.position.z>10){scene.remove(o);obstacles.splice(i,1);continue}const dx=Math.abs(o.position.x-player.position.x),dz=Math.abs(o.position.z-player.position.z);if(dx<1.15&&dz<1.3){const kind=o.userData.kind;let hit=false;if(kind==='jump'&&playerY<1.05)hit=true;else if(kind==='low'&&playerY<.55)hit=true;else if((kind==='pillar'||kind==='spin')&&playerY<1.6)hit=true;if(hit){die();break}}}
+const posAttr=trail.geometry.attributes.position;for(let i=posAttr.count-1;i>0;i--)posAttr.setXYZ(i,posAttr.getX(i-1),posAttr.getY(i-1),posAttr.getZ(i-1));posAttr.setXYZ(0,player.position.x,player.position.y+.3,player.position.z+.9);posAttr.needsUpdate=true;trail.material.opacity=dashTimer>0?.95:.55;
+for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.userData.life-=dt;p.position.addScaledVector(p.userData.vel,dt);p.userData.vel.y-=8*dt;p.material.opacity=Math.max(0,p.userData.life*1.5);if(p.userData.life<=0){scene.remove(p);particles.splice(i,1)}}
+ambientStars.rotation.y+=dt*.02;spawnAhead();scoreEl.textContent=Math.floor(score).toLocaleString();speedEl.textContent=speedMul.toFixed(1)+'×';if(streak===0)multEl.classList.remove('show')}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);update(dt);composer.render()}
+function onResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);composer.setSize(window.innerWidth,window.innerHeight)}
+startBtn.addEventListener('click',startGame);retryBtn.addEventListener('click',startGame);muteBtn.addEventListener('click',()=>setMuted(!musicMuted));
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturestart',e=>e.preventDefault());
+init();
+</script>
+</body>
+</html>
