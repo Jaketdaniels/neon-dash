@@ -1,21 +1,25 @@
 # Neon Dash Development Notes
 
-## 2026-08-08 (latest)
+## 2026-08-08
 
-### Continuous route + teaching intro
-- **No long empty stretches**: `spawnAhead` tracks `lastInteractableZ` and forces a crystal or obstacle if the empty gap exceeds `getMaxEmptyGap()` (starts ~14 units, tightens over distance).
-- **Higher baseline density** in `js/difficulty.js` so the road always has a readable route.
-- **Teaching intro on every start**:
-  1. Four cyan crystals in a straight line (center lane) so the player scores immediately.
-  2. Brief gap.
-  3. One clear red jump obstacle in the center lane — passive players collide and learn to avoid.
-  4. Then normal progressive spawning takes over.
-- **Clearer language** on the title screen: “Collect glowing cyan crystals · Avoid red obstacles”.
-- Crystals got an extra outer ring for an even stronger “pickup” silhouette; obstacles keep aggressive red/spiky look + subtle danger glow on barriers.
+### Bugfix: obstacles/crystals stopping after a few seconds
+**Cause:** Player stays at `z ≈ 0` while the world scrolls toward the camera. `nextSpawnZ` was only ever decreased when spawning, never advanced with the scroll. Once it fell past the look-ahead (`player.z - 95`), `spawnAhead()` stopped running forever.
+
+**Fix:** Each frame, after moving obstacles/crystals:
+```js
+nextSpawnZ += move;
+lastInteractableZ += move;
+```
+The spawn frontier now scrolls with the world, so new content keeps being placed ahead indefinitely.
+
+### Continuous route + teaching intro (previous)
+- Forced interactables when empty stretch exceeds `getMaxEmptyGap()`
+- Intro: 4 center-lane crystals → gap → one red jump obstacle (teaches collect vs avoid)
+- Clearer title hint and distinct crystal/obstacle visuals
 
 ### Modules
-- `js/entities.js` – distinct crystal vs obstacle visuals + forced kind/lane for intro
-- `js/difficulty.js` – density/gap/speed ramps + `getIntroSequence()` + `getMaxEmptyGap()`
+- `js/entities.js` – crystal vs obstacle meshes
+- `js/difficulty.js` – speed/density ramps, intro sequence, max empty gap
 
 ### Play
 https://jaketdaniels.github.io/neon-dash/
