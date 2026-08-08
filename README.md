@@ -1,30 +1,28 @@
 # Neon Dash
 
-**A synthwave 3D endless runner** built for the browser. Neon grids, glowing hovercraft, crystal streaks, glitch events, and pure 80s cyber vibes.
+A neon-soaked synthwave 3D endless runner for the browser.
 
-## Play
+**[▶ Play now](https://jaketdaniels.github.io/neon-dash/)**
 
-[**Play Neon Dash**](https://jaketdaniels.github.io/neon-dash/)
-
-(Enable GitHub Pages on `main` / root if the link 404s.)
+(If the link 404s, enable GitHub Pages: Settings → Pages → branch `main` → `/` root.)
 
 ## Controls
 
-| Action | Desktop | Mobile |
-|--------|---------|--------|
-| Change lane | ← → or A/D | Swipe left / right |
+| | Desktop | Touch |
+|---|---------|-------|
+| Lane | ← → / A D | Swipe left / right |
 | Jump | Space / ↑ / W | Swipe up or tap |
-| Neon Dash (boost + brief invuln) | Shift | Hold or double-tap |
+| Neon Dash | Shift | Hold finger or double-tap |
 
-Collect glowing crystals to build your multiplier. Survive random events: Glitch Wave, Crystal Rain, Phase Shift, Overclock.
+Dash gives a speed burst + short invulnerability and multiplies score.
 
-## Tech
+Collect cyan crystals for a rising multiplier. Random events (Glitch Wave, Crystal Rain, Phase Shift, Overclock) keep runs surprising.
 
-- Three.js (r170) + UnrealBloomPass
-- Procedural Canvas neon textures (inspired by generated synthwave assets)
-- Single-file static site for GitHub Pages
-- Fully mobile-friendly (touch, no zoom, responsive UI)
+## Stack
 
-## Development
+- Three.js r170 + bloom post-processing
+- Pure static single-file HTML (GitHub Pages ready)
+- Procedural neon textures + emissive materials
+- Fully mobile-friendly
 
-See `notes.md` for commit history and design notes.
+Made with synthwave love.

@@ -1,35 +1,33 @@
 # Neon Dash Development Notes
 
-## 2026-08-08 - Initial Setup
-- Created public GitHub repo `neon-dash` under Jaketdaniels.
-- Added basic `index.html` with neon synthwave title screen, Play button, mobile-friendly viewport and touch hints.
-- HUD placeholders for score/speed.
-- Import map for Three.js prepared (CDN).
-- Next: implement core 3D scene, player, infinite road, basic controls.
+## 2026-08-08
 
-## Add .nojekyll
-- Added empty `.nojekyll` so GitHub Pages serves pure static files without Jekyll processing.
+### Repo & Pages
+- Created public repo `Jaketdaniels/neon-dash`.
+- `.nojekyll` added for pure static serving.
+- **Enable Pages**: Settings → Pages → Deploy from branch `main` / root.
+- Live URL: https://jaketdaniels.github.io/neon-dash/
 
-## Core Game Implementation
-- Full Three.js 3D endless runner with UnrealBloomPass for glowing neon aesthetic.
-- Procedural CanvasTexture neon grid road (inspired by Grok Imagine generated synthwave grid, circuit, and crystal textures).
-- Player: low-poly hovercraft with emissive materials, engine glow, particle trail.
-- 3 lanes, swipe/keyboard lane change, jump physics, NEON DASH (hold or double-tap / Shift) for temporary boost + invulnerability.
-- Obstacles: jump barriers, low bars, pillars, spinning octahedrons.
-- Collectible neon crystals that build score multiplier streak.
-- Random surprise events: GLITCH WAVE (invuln+speed), CRYSTAL RAIN, PHASE SHIFT (FOV pulse), OVERCLOCK.
-- Mobile-first: touch swipe detection, hold-to-dash, preventDefault on touchmove/gestures, responsive UI, full viewport.
-- Infinite road via recycling segments; fog, ambient stars, side neon posts.
-- Score based on distance * multiplier * dash bonus.
-- Game over "SIGNAL LOST" with reboot.
-- Title camera idle sway.
+### Game Features (final)
+- **Synthwave 3D endless runner** with Three.js + UnrealBloomPass.
+- Procedural neon-grid road texture (CanvasTexture) matching the aesthetic of Grok Imagine generated grid/circuit/crystal textures.
+- Hovercraft player with emissive glow, wings, engine, additive particle trail.
+- 3 lanes, smooth lerp, jump physics, NEON DASH (boost + invuln).
+- Obstacles: tall jump barriers, low bars, pillars, spinning octahedrons.
+- Collectible crystals → streak multiplier (up to ×5).
+- Random events: GLITCH WAVE, CRYSTAL RAIN, PHASE SHIFT (FOV), OVERCLOCK.
+- Mobile: swipe lanes/jump, hold or double-tap dash, no-zoom, full-bleed, touch-action none.
+- Title screen has ambient scrolling road + neon posts + camera sway.
+- Side neon posts recycle with the world.
+- Game over “SIGNAL LOST” + Reboot.
+- Score = distance × multiplier × dash bonus.
 
-**To enable GitHub Pages:** Repo Settings → Pages → Source: Deploy from a branch → main → / (root) → Save.
-Site will be at https://jaketdaniels.github.io/neon-dash/
+### Commits
+1. Title screen skeleton
+2. .nojekyll
+3. Full core game + bloom + controls + events
+4. Side-post recycling + title ambient drift
+5. Restore clean full index after empty push accident
+6. Notes + README final
 
-Generated textures (for reference / future assets): neon grid perspective, circuit panel, crystal facets — used as visual targets for procedural materials.
-
-## Polish pass
-- Side neon posts now recycle and scroll with the world (14 posts per side).
-- Title screen has slow ambient road + post drift so the 3D scene feels alive before Play is pressed.
-- README updated with controls and play link.
+Game is self-contained in `index.html`. Fun, surprising events, strong synthwave neon look, mobile ready.
