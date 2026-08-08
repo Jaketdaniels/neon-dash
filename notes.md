@@ -28,3 +28,8 @@
 Site will be at https://jaketdaniels.github.io/neon-dash/
 
 Generated textures (for reference / future assets): neon grid perspective, circuit panel, crystal facets — used as visual targets for procedural materials.
+
+## Polish pass
+- Side neon posts now recycle and scroll with the world (14 posts per side).
+- Title screen has slow ambient road + post drift so the 3D scene feels alive before Play is pressed.
+- README updated with controls and play link.
