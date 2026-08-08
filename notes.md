@@ -6,3 +6,6 @@
 - HUD placeholders for score/speed.
 - Import map for Three.js prepared (CDN).
 - Next: implement core 3D scene, player, infinite road, basic controls.
+
+## Add .nojekyll
+- Added empty `.nojekyll` so GitHub Pages serves pure static files without Jekyll processing.
