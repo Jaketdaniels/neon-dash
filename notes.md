@@ -3,22 +3,30 @@
 ## 2026-08-08
 
 ### Repo & Pages
-- Public repo: https://github.com/Jaketdaniels/neon-dash
-- Enable Pages: Settings → Pages → Deploy from branch `main` → `/` (root).
+- https://github.com/Jaketdaniels/neon-dash
+- Enable Pages: Settings → Pages → branch `main` → `/` root
 - Live: https://jaketdaniels.github.io/neon-dash/
 
-### Modular additions (latest)
-- **`js/entities.js`** – visually distinct entities:
-  - **Crystals** (points): dual-tone cyan/magenta octahedron + additive glow halo + spinning ring. Friendly, high-emissive silhouette.
-  - **Obstacles** (danger): aggressive red/orange palette, spikes on barriers, warning stripes on low bars, glowing bands on pillars, spiky spinning hazards. Harder types bias upward with distance.
-- **`js/difficulty.js`** – progressive difficulty:
-  - Base speed ramps with distance travelled.
-  - Obstacle density and spawn gap tighten the further you go.
-  - Crystal chance stays generous so scoring remains fun.
-  - Max speed-mul ceiling also grows slowly so Neon Dash stays useful late-game.
+### New modular files (this update)
 
-### Core features (unchanged)
-- Three.js + bloom, synthwave Web Audio soundtrack, mobile swipe controls, events, dash, etc.
+**`js/entities.js`** – Visually distinct entities
+- **Crystals (points)**: Dual-tone cyan/magenta octahedron + additive glow halo + spinning ring. Bright, friendly silhouette that is easy to spot as collectibles.
+- **Obstacles (danger)**: Aggressive red/orange palette:
+  - Jump barriers with spikes and glowing top edge
+  - Low barriers with warning stripes
+  - Pillars with glowing bands
+  - Spinning spiky red octahedrons
+- Harder obstacle types become more common the further you travel.
 
-### How to preview
-Refresh the Pages site after the latest push. Obstacles now clearly look dangerous (red/spiky); crystals clearly look collectible (cyan + halo + ring). Speed and obstacle pressure rise the longer you survive.
+**`js/difficulty.js`** – Progressive difficulty
+- Base speed ramps smoothly with distance.
+- Obstacle density increases and spawn gaps tighten the longer you survive.
+- Crystal spawn rate stays generous so scoring remains rewarding.
+- Max speed-multiplier ceiling also grows slowly so Neon Dash stays useful late-game.
+
+### How it feels
+- Early run: roomy, clear cyan crystals vs red obstacles.
+- Mid/late run: faster base speed, denser and more aggressive obstacles, still readable silhouettes.
+
+### Core (unchanged)
+Three.js + bloom, Web Audio synthwave soundtrack, mobile swipe controls, events, dash, etc.
